@@ -26,3 +26,34 @@ target_compile_definitions(win32xx
         INTERFACE
         UNICODE
         _UNICODE)
+
+# Win32++ is a Windows GUI framework, so it declares the system import
+# libraries it needs. Consumers then only have to link win32xx::win32xx and do
+# not need to repeat this list. Most of these are already default libraries for
+# the common toolchains; comctl32 (common controls) is the one that usually is
+# not, so listing them here keeps consumers correct regardless of toolchain.
+target_link_libraries(win32xx
+        INTERFACE
+        comctl32
+        comdlg32
+        gdi32
+        user32
+        advapi32
+        shell32
+        ole32
+        oleaut32
+        uuid
+        winspool)
+
+# Win32++ places all of its classes in the Win32xx namespace, but by default it
+# also injects 'using namespace Win32xx;' globally (see wxx_setup.h). That
+# global using is what collides with ATL and WTL, which declare identically
+# named classes (CWnd, CString, CDC, CRect, ...). Enable this option to skip the
+# global using; consumers then qualify Win32++ types as Win32xx::CWnd and the
+# three frameworks coexist. The option is OFF by default for source
+# compatibility with existing single-framework projects.
+option(WIN32XX_NO_USING_NAMESPACE
+        "Skip 'using namespace Win32xx;' so Win32++ can coexist with ATL/WTL" OFF)
+if (WIN32XX_NO_USING_NAMESPACE)
+    target_compile_definitions(win32xx INTERFACE NO_USING_NAMESPACE)
+endif()
