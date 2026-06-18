@@ -42,18 +42,18 @@ include(FetchContent)
 FetchContent_Declare(
         win32xx
         GIT_REPOSITORY https://github.com/tinysec/win32xx.git
-        GIT_TAG v9.6.1)         # floating tag and release; the immutable
-                                # v9.6.1.{build} tags also exist
+        GIT_TAG v9.6.1)         # floating tag and release alias; immutable
+                                # v9.6.1.{build} tags/releases also exist
 FetchContent_MakeAvailable(win32xx)
 
 target_link_libraries(your_target PRIVATE win32xx::win32xx)
 ```
 
-Version tags published by CI:
+Version tags and releases published by CI:
 
-- `v9.6.1.{buildnumber}` — immutable, full four-component build version
-- `v9.6.1` — floating three-component tag and the floating GitHub release,
-  re-pointed to the latest build commit
+- `v9.6.1.{buildnumber}` - immutable, full four-component build tag and release
+- `v9.6.1` - floating three-component tag and GitHub release alias, re-pointed
+  to the latest build
 
 This repository is intended to be consumed with `FetchContent`; it does not
 provide CMake install or package configuration support.
