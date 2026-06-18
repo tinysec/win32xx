@@ -11,13 +11,13 @@ on:
 
 # Semantic version layout for releases and tags:
 #   WIN32XX_VERSION  base 3-component release version, e.g. 9.6.1
-#   build tag        v9.6.1.{run_number}  immutable, full four-component version
-#   FLOAT_TAG        v9.6.1               floating 3-component tag and release,
-#                                         re-pointed to the same commit as the
-#                                         latest build tag
+#   build tag/release
+#                    v9.6.1.{run_number}  immutable, full four-component version
+#   FLOATING_TAG     v9.6.1               floating 3-component tag and release
+#                                         alias for the latest build tag/release
 env:
   WIN32XX_VERSION: 9.6.1
-  FLOAT_TAG: v9.6.1
+  FLOATING_TAG: v9.6.1
 
 permissions:
   contents: write
@@ -60,28 +60,38 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: publish build tag and floating release
+      - name: publish versioned build and floating aliases
         env:
           GH_TOKEN: ${{ github.token }}
-          BUILD_TAG: v${{ env.WIN32XX_VERSION }}.${{ github.run_number }}
         shell: bash
         run: |
           set -euo pipefail
 
+          # 1. Resolve the semantic version for this build (major.minor.patch.build)
+          BUILD_VERSION="${WIN32XX_VERSION}.${GITHUB_RUN_NUMBER}"
+          BUILD_TAG="v${BUILD_VERSION}"
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-          # 1. Immutable four-component build tag carrying the full version.
+          # 2. Publish the immutable versioned tag and its pinnable release.
           git tag "${BUILD_TAG}" "${GITHUB_SHA}"
           git push origin "refs/tags/${BUILD_TAG}"
 
-          # 2. Re-point the floating three-component tag to the build commit.
-          git tag -f "${FLOAT_TAG}" "${GITHUB_SHA}"
-          git push -f origin "refs/tags/${FLOAT_TAG}"
+          gh release create "${BUILD_TAG}" \
+            --title "${BUILD_TAG}" \
+            --latest \
+            --notes "Automated FetchContent-only Win32++ ${BUILD_VERSION} build ${GITHUB_RUN_NUMBER}."
 
-          # 3. Refresh the floating release that tracks the latest build.
-          gh release delete "${FLOAT_TAG}" --yes || true
+          # 3. Re-point the floating tag alias to this build.
+          gh release delete "${FLOATING_TAG}" --yes || true
+          git push origin ":refs/tags/${FLOATING_TAG}" || true
 
-          gh release create "${FLOAT_TAG}" \
-            --title "Win32++ ${WIN32XX_VERSION} (floating ${FLOAT_TAG})" \
-            --notes "Floating release for Win32++ ${WIN32XX_VERSION}. Full build version: ${BUILD_TAG} (build ${GITHUB_RUN_NUMBER}). The floating ${FLOAT_TAG} tag points to ${GITHUB_SHA}."
+          git tag -f "${FLOATING_TAG}" "${GITHUB_SHA}"
+          git push origin "refs/tags/${FLOATING_TAG}"
+
+          # 4. Re-create the floating release alias pointing at the latest build.
+          gh release create "${FLOATING_TAG}" \
+            --title "${FLOATING_TAG}" \
+            --latest=false \
+            --notes "Floating Win32++ ${WIN32XX_VERSION} release. Always points to the latest build (${BUILD_TAG})."
